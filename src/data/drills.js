@@ -50,16 +50,40 @@ export function getZoneGrid(zoneName, handedness) {
   return pos;
 }
 
+// Cues reflect the cross-source coaching consensus: hands move first (top hand
+// straight to the ball), then a shot-side save step; stay square and don't turn
+// the hips on off-stick saves; drop the hips/knee rather than step on five-hole;
+// chest over stick on low saves.
+//
+// Footwork is drill-aware. On a straight perimeter shot (shot-reaction), the
+// off-stick first move is a wide lateral save step. After a feed across the
+// crease (combined / pass drills), the off-stick first move is a drop step to
+// re-square quickly without crossing the feet. The stick-side and central zones
+// use the same footwork either way.
 const TECHNIQUES = {
-  'High Stick-Side': 'Step stick side, stick head up',
-  'High Center':     'Set feet, stick head up',
-  'High Off-Stick':  'Drop step, stick head up',
-  'Mid Stick-Side':  'Step stick side, hands in',
-  '5-Hole':          'Stick head down, squeeze',
-  'Mid Off-Stick':   'Drop step and reach',
-  'Low Stick-Side':  'Step stick side, stick head down',
-  'Low Off-Stick':   'Drop step, stick head down',
+  'High Stick-Side': 'Hands up first, step stick side',
+  'High Center':     'Hands up first, stay tall',
+  'High Off-Stick':  'Hands up, wide step, stay square',
+  'Mid Stick-Side':  'Top hand to ball, step stick side',
+  '5-Hole':          'No step, drop the knee, stay low',
+  'Mid Off-Stick':   'Top hand straight, stay square',
+  'Low Stick-Side':  'Stick down first, chest over stick',
+  'Low Off-Stick':   'Stick down, wide step, body behind it',
 };
+
+// Off-stick footwork overrides when the save follows a feed (drop step to
+// re-square). Only the zones whose footwork actually changes are listed.
+const FEED_TECHNIQUES = {
+  'High Off-Stick': 'Hands up, drop step, stay square',
+  'Low Off-Stick':  'Stick down, drop step, body behind it',
+};
+
+// Pass drills always involve a feed; combined drills step to a cone then react,
+// so they also re-square off a movement rather than a static perimeter set.
+function techniqueFor(zone, drillType) {
+  const feed = drillType === 'pass' || drillType === 'combined';
+  return (feed && FEED_TECHNIQUES[zone]) || TECHNIQUES[zone];
+}
 
 function shotCue(zone, shotType, level) {
   if (level === 4) return null;
@@ -89,9 +113,41 @@ export function generateCueText(rep, drill, level) {
     if (level === 4) return null;
     if (level === 3) return `${rep.cone}. ${rep.zone}.`;
     if (level === 2) return `${rep.cone} cone. ${rep.zone}. ${rep.shotType}.`;
-    return `${rep.cone} cone. ${rep.zone}. ${rep.shotType}. ${TECHNIQUES[rep.zone]}.`;
+    return `${rep.cone} cone. ${rep.zone}. ${rep.shotType}. ${techniqueFor(rep.zone, 'combined')}.`;
+  }
+  if (drill.type === 'pass') {
+    if (level === 4) return null;
+    if (level === 3) return `${rep.coneTo}. ${rep.zone}.`;
+    if (level === 2) return `${rep.coneFrom} to ${rep.coneTo}. ${rep.zone}. ${rep.shotType}.`;
+    return `Pass ${rep.coneFrom} to ${rep.coneTo}. Re-square. Shot ${rep.zone}. ${rep.shotType}. ${techniqueFor(rep.zone, 'pass')}.`;
   }
   return '';
+}
+
+// Pick a random element from a non-empty array.
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Replace selected rep fields with random valid values. `fields` is
+// { cone, zone, shotType } — each a boolean. Only fields present on the rep and
+// supported by the drill are randomized; the rep shape is preserved.
+export function randomizeRep(rep, drill, fields) {
+  const out = { ...rep };
+  const coneColors = (drill.cones ?? []).map(c => c.color);
+
+  if (fields.cone && coneColors.length) {
+    if ('coneFrom' in rep) {
+      out.coneFrom = pick(coneColors);
+      const others = coneColors.filter(c => c !== out.coneFrom);
+      out.coneTo = others.length ? pick(others) : out.coneFrom;
+    } else if ('cone' in rep) {
+      out.cone = pick(coneColors);
+    }
+  }
+  if (fields.zone && 'zone' in rep) out.zone = pick(ZONE_NAMES);
+  if (fields.shotType && 'shotType' in rep) out.shotType = pick(SHOT_TYPES);
+  return out;
 }
 
 export function getLevel(profile, drill) {
@@ -192,6 +248,26 @@ export const DRILLS = [
       { cone: 'Blue', zone: '5-Hole',          shotType: 'Skip shot' },
       { cone: 'Red',  zone: 'Low Stick-Side',  shotType: 'Direct' },
       { cone: 'Blue', zone: 'High Off-Stick',  shotType: 'Bounce shot' },
+    ],
+  },
+  {
+    id: 'pass-1',
+    name: 'Crease Feed Reaction',
+    type: 'pass',
+    levelType: 'shot-reaction',
+    description: 'Simulates a feed across the crease: drop step to re-square from the first cone to the second, then react to the shot.',
+    intervalSeconds: 9,
+    cones: [
+      { color: 'Red',  shotFrom: 'Left 45',  position: 1 },
+      { color: 'Blue', shotFrom: 'Right 45', position: 3 },
+    ],
+    reps: [
+      { coneFrom: 'Red',  coneTo: 'Blue', zone: 'High Off-Stick', shotType: 'Direct' },
+      { coneFrom: 'Blue', coneTo: 'Red',  zone: 'Low Off-Stick',  shotType: 'Bounce shot' },
+      { coneFrom: 'Red',  coneTo: 'Blue', zone: 'Mid Off-Stick',  shotType: 'Sidearm' },
+      { coneFrom: 'Blue', coneTo: 'Red',  zone: 'High Off-Stick', shotType: 'Direct' },
+      { coneFrom: 'Red',  coneTo: 'Blue', zone: '5-Hole',         shotType: 'Skip shot' },
+      { coneFrom: 'Blue', coneTo: 'Red',  zone: 'Low Off-Stick',  shotType: 'Direct' },
     ],
   },
 ];

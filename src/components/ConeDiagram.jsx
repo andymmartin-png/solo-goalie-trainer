@@ -20,7 +20,7 @@ function computePositions(cones, W, H) {
   });
 }
 
-export default function ConeDiagram({ cones, activeCone, compact = false }) {
+export default function ConeDiagram({ cones, activeCone, fromCone = null, compact = false }) {
   const W = compact ? 280 : 300;
   const H = compact ? 90  : 180;
   const positions = computePositions(cones, W, H);
@@ -31,11 +31,29 @@ export default function ConeDiagram({ cones, activeCone, compact = false }) {
       positions.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
     : '';
 
+  // Feed arrow for pass drills: from the origin cone to the active (receiving) cone.
+  const feedFrom = fromCone && fromCone !== activeCone
+    ? positions.find(p => p.color === fromCone) : null;
+  const feedTo = feedFrom ? positions.find(p => p.color === activeCone) : null;
+
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className={compact ? 'cone-diagram-compact' : 'cone-diagram'}
       aria-label="Cone diagram">
+      <defs>
+        <marker id="cone-arrow" viewBox="0 0 10 10" refX="8" refY="5"
+          markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#f8fafc" />
+        </marker>
+      </defs>
       {/* Arc guide */}
       <path d={pathD} fill="none" stroke="#1e3a5f" strokeWidth="1.5" strokeDasharray="5 4" />
+
+      {/* Pass feed arrow */}
+      {feedFrom && feedTo && (
+        <line x1={feedFrom.x} y1={feedFrom.y - 4} x2={feedTo.x} y2={feedTo.y - 4}
+          stroke="#f8fafc" strokeWidth="2" strokeDasharray="4 3"
+          markerEnd="url(#cone-arrow)" opacity="0.85" />
+      )}
 
       {positions.map(cone => {
         const isActive = cone.color === activeCone;

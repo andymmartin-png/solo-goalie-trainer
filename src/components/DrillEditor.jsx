@@ -6,11 +6,17 @@ const TYPES = [
   { id: 'shot-reaction', label: 'Shot Reaction', levelType: 'shot-reaction' },
   { id: 'cone',          label: 'Cone Drill',    levelType: 'cone' },
   { id: 'combined',      label: 'Combined',      levelType: 'shot-reaction' },
+  { id: 'pass',          label: 'Pass + Shot',   levelType: 'shot-reaction' },
 ];
 
 function blankRep(type, cones) {
   if (type === 'cone')     return { cone: cones[0]?.color ?? 'Red' };
   if (type === 'combined') return { cone: cones[0]?.color ?? 'Red', zone: ZONE_NAMES[0], shotType: SHOT_TYPES[0] };
+  if (type === 'pass')     return {
+    coneFrom: cones[0]?.color ?? 'Red',
+    coneTo:   cones[1]?.color ?? cones[0]?.color ?? 'Blue',
+    zone: ZONE_NAMES[0], shotType: SHOT_TYPES[0],
+  };
   return { zone: ZONE_NAMES[0], shotType: SHOT_TYPES[0] };
 }
 
@@ -23,15 +29,22 @@ export default function DrillEditor({ drill, onDone }) {
   const [cones,       setCones]       = useState(drill?.cones ?? []);
   const [reps,        setReps]        = useState(drill?.reps ?? [blankRep('shot-reaction', [])]);
 
-  const usesCones = type === 'cone' || type === 'combined';
-  const valid = name.trim().length > 0 && reps.length > 0 && (!usesCones || cones.length > 0);
+  const usesCones = type === 'cone' || type === 'combined' || type === 'pass';
+  // Pass drills simulate a feed across the crease, so they need at least two cones.
+  const minCones = type === 'pass' ? 2 : 1;
+  const valid = name.trim().length > 0 && reps.length > 0 && (!usesCones || cones.length >= minCones);
 
   function changeType(newType) {
     setType(newType);
     // Reset reps to a valid shape for the new type
-    const startCones = (newType === 'cone' || newType === 'combined')
+    const usesConesNext = newType === 'cone' || newType === 'combined' || newType === 'pass';
+    let startCones = usesConesNext
       ? (cones.length ? cones : [{ color: 'Red', shotFrom: 'Left Pipe', position: 0 }])
       : cones;
+    // Pass drills need a second cone to feed to.
+    if (newType === 'pass' && startCones.length < 2) {
+      startCones = [...startCones, { color: 'Blue', shotFrom: 'Right Pipe', position: 4 }];
+    }
     setCones(startCones);
     setReps([blankRep(newType, startCones)]);
   }
@@ -47,6 +60,20 @@ export default function DrillEditor({ drill, onDone }) {
   function updateCone(i, patch) {
     setCones(cones.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
   }
+  // Renaming a cone's color must re-point any reps that reference the old color,
+  // otherwise the rep dropdowns blank out and cues speak a color that's gone.
+  function changeColor(i, newColor) {
+    const old = cones[i]?.color;
+    updateCone(i, { color: newColor });
+    if (old && old !== newColor) {
+      setReps(reps.map(r => ({
+        ...r,
+        ...(r.cone === old     ? { cone: newColor } : {}),
+        ...(r.coneFrom === old ? { coneFrom: newColor } : {}),
+        ...(r.coneTo === old   ? { coneTo: newColor } : {}),
+      })));
+    }
+  }
   // Keep the field slot (position) in sync with the chosen shooter position.
   function changeShotFrom(i, spot) {
     updateCone(i, { shotFrom: spot, position: SHOOTER_POSITIONS.indexOf(spot) });
@@ -56,7 +83,13 @@ export default function DrillEditor({ drill, onDone }) {
     setCones(next);
     // Drop reps referencing the removed cone
     const removed = cones[i]?.color;
-    setReps(reps.map(r => (r.cone === removed ? { ...r, cone: next[0]?.color } : r)));
+    const fallback = next[0]?.color;
+    setReps(reps.map(r => ({
+      ...r,
+      ...(r.cone === removed     ? { cone: fallback } : {}),
+      ...(r.coneFrom === removed ? { coneFrom: fallback } : {}),
+      ...(r.coneTo === removed   ? { coneTo: next[1]?.color ?? fallback } : {}),
+    })));
   }
 
   // ── Rep editing ──
@@ -143,7 +176,7 @@ export default function DrillEditor({ drill, onDone }) {
                 <div key={i} className="editor-rep">
                   <span className="cone-swatch" style={{ background: CONE_COLOR_MAP[c.color] }} />
                   <select className="rep-select" value={c.color}
-                    onChange={e => updateCone(i, { color: e.target.value })}>
+                    onChange={e => changeColor(i, e.target.value)}>
                     {CONE_COLORS.map(col => <option key={col} value={col}>{col}</option>)}
                   </select>
                   <select className="rep-select" value={c.shotFrom}
@@ -175,7 +208,21 @@ export default function DrillEditor({ drill, onDone }) {
                   </select>
                 )}
 
-                {(type === 'shot-reaction' || type === 'combined') && (
+                {type === 'pass' && (
+                  <>
+                    <select className="rep-select" value={r.coneFrom}
+                      onChange={e => updateRep(i, { coneFrom: e.target.value })}>
+                      {coneColors.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                    <span className="rep-arrow">→</span>
+                    <select className="rep-select" value={r.coneTo}
+                      onChange={e => updateRep(i, { coneTo: e.target.value })}>
+                      {coneColors.map(col => <option key={col} value={col}>{col}</option>)}
+                    </select>
+                  </>
+                )}
+
+                {(type === 'shot-reaction' || type === 'combined' || type === 'pass') && (
                   <>
                     <select className="rep-select" value={r.zone}
                       onChange={e => updateRep(i, { zone: e.target.value })}>

@@ -745,6 +745,28 @@ html, body, #root {
 .randomize-on { border-color: var(--accent); color: var(--accent); }
 .randomize-icon { font-size: 16px; }
 
+/* Per-field randomization */
+.rand-field-row {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  margin-top: 10px;
+}
+.rand-field-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-dim);
+}
+.rand-field-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.rand-chip {
+  background: var(--bg3); border: 1.5px solid var(--border); border-radius: 99px;
+  color: var(--text-muted); font-size: 12px; font-weight: 600;
+  padding: 5px 12px; cursor: pointer;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+}
+.rand-chip:hover { border-color: var(--accent); color: var(--text); }
+.rand-chip-on { border-color: var(--accent); color: var(--accent); background: rgba(177,205,227,0.1); }
+
+/* Pass-drill arrow between cone selects in the editor */
+.rep-arrow { font-size: 14px; color: var(--text-dim); flex-shrink: 0; }
+
 /* Manual tap button */
 .btn-tap {
   background: var(--accent);

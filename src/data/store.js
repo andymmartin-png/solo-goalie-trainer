@@ -53,7 +53,7 @@ export function deleteProfile(id) {
 // ── Drills ──
 
 // Bump when the built-in DRILLS change so existing testers pick up the update.
-const DRILLS_VERSION = 2;
+const DRILLS_VERSION = 3;
 const DRILLS_VERSION_KEY = 'sgt-drills-version';
 
 // Refresh built-in drills (matched by id) to the current defaults while keeping

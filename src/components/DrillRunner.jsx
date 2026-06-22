@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import GoalDiagram from './GoalDiagram';
 import ConeDiagram from './ConeDiagram';
-import { generateCueText, getLevel, getIntervalSeconds, LEVEL_LABELS, CONE_COLOR_MAP } from '../data/drills';
+import { generateCueText, getLevel, getIntervalSeconds, LEVEL_LABELS, CONE_COLOR_MAP, randomizeRep } from '../data/drills';
 import { getPerspective } from '../data/store';
 import { playTone, speak, warmUpAudio } from '../audio';
 
@@ -15,13 +15,17 @@ function shuffle(arr) {
 }
 
 // Build a rep sequence of exactly `count` items, cycling the drill reps if needed.
-function buildSequence(drillReps, count, randomize) {
+// `randomize` shuffles rep ORDER; `randomFields` (cone/zone/shotType) replaces
+// individual rep VALUES with random valid picks.
+function buildSequence(drill, count, randomize, randomFields) {
+  const drillReps = drill.reps;
+  const anyField = randomFields.cone || randomFields.zone || randomFields.shotType;
   const result = [];
   while (result.length < count) {
     const batch = randomize ? shuffle([...drillReps]) : [...drillReps];
     result.push(...batch);
   }
-  return result.slice(0, count);
+  return result.slice(0, count).map(r => (anyField ? randomizeRep(r, drill, randomFields) : r));
 }
 
 const REP_PRESETS = [8, 12, 16, 20];
@@ -35,6 +39,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
   // Pre-session options
   const [pacingMode,    setPacingMode]    = useState('timer');
   const [randomize,     setRandomize]     = useState(false);
+  const [randomFields,  setRandomFields]  = useState({ cone: false, zone: false, shotType: false });
   const [interval,      setIntervalSecs]  = useState(defaultInterval);
   const [repPreset,     setRepPreset]     = useState('all');   // 'all' | number | 'custom'
   const [customReps,    setCustomReps]    = useState('');
@@ -110,7 +115,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
 
   function startDrill() {
     warmUpAudio(); // unlock iOS audio + speech inside this tap gesture
-    const sequence = buildSequence(drill.reps, effectiveReps, randomize);
+    const sequence = buildSequence(drill, effectiveReps, randomize, randomFields);
     setReps(sequence);
     setRepIndex(0);
     setTimeLeft(interval);
@@ -147,10 +152,17 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
     ? generateCueText(currentRep, drill, level)
     : null;
 
-  const showGoal     = drill.type === 'shot-reaction' || drill.type === 'combined';
-  const activeConeColor = phase === 'running' && currentRep?.cone
-    ? CONE_COLOR_MAP[currentRep.cone]
+  const showGoal     = drill.type === 'shot-reaction' || drill.type === 'combined' || drill.type === 'pass';
+  const activeConeColorName = currentRep?.cone ?? currentRep?.coneTo;
+  const activeConeColor = phase === 'running' && activeConeColorName
+    ? CONE_COLOR_MAP[activeConeColorName]
     : null;
+
+  // Which randomize-field toggles apply to this drill type
+  const canRandCone     = drill.type === 'cone' || drill.type === 'combined' || drill.type === 'pass';
+  const canRandZone     = drill.type === 'shot-reaction' || drill.type === 'combined' || drill.type === 'pass';
+  const canRandShotType = canRandZone;
+  function toggleField(key) { setRandomFields(f => ({ ...f, [key]: !f[key] })); }
 
   return (
     <div className="screen runner-screen">
@@ -168,9 +180,9 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
 
       <div className="runner-level-row">
         <span className="badge badge-level">Level {level} · {LEVEL_LABELS[level]}</span>
-        {phase === 'running' && activeConeColor && drill.type === 'combined' && (
+        {phase === 'running' && activeConeColor && (drill.type === 'combined' || drill.type === 'pass') && (
           <span className="cone-indicator" style={{ background: activeConeColor }}>
-            {currentRep.cone}
+            {activeConeColorName}
           </span>
         )}
       </div>
@@ -196,6 +208,14 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
         )}
         {drill.type === 'combined' && (
           <ConeDiagram cones={drill.cones} activeCone={phase === 'running' ? currentRep?.cone : null} compact />
+        )}
+        {drill.type === 'pass' && (
+          <ConeDiagram
+            cones={drill.cones}
+            activeCone={phase === 'running' ? currentRep?.coneTo : null}
+            fromCone={phase === 'running' ? currentRep?.coneFrom : null}
+            compact
+          />
         )}
       </div>
 
@@ -268,6 +288,27 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
               <span className="randomize-icon">⇄</span>
               {randomize ? 'Shuffled' : 'Fixed order'}
             </button>
+
+            {/* Per-field randomization */}
+            {(canRandCone || canRandZone || canRandShotType) && (
+              <div className="rand-field-row">
+                <span className="rand-field-label">Randomize</span>
+                <div className="rand-field-chips">
+                  {canRandCone && (
+                    <button className={`rand-chip ${randomFields.cone ? 'rand-chip-on' : ''}`}
+                      onClick={() => toggleField('cone')}>🎲 Cone</button>
+                  )}
+                  {canRandZone && (
+                    <button className={`rand-chip ${randomFields.zone ? 'rand-chip-on' : ''}`}
+                      onClick={() => toggleField('zone')}>🎲 Net</button>
+                  )}
+                  {canRandShotType && (
+                    <button className={`rand-chip ${randomFields.shotType ? 'rand-chip-on' : ''}`}
+                      onClick={() => toggleField('shotType')}>🎲 Shot</button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <p className="ready-hint">{effectiveReps} reps · audio + visual</p>
             <button className="btn-start" onClick={startDrill}>Start Drill</button>
