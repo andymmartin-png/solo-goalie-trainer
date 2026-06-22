@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  generateCueText, getIntervalSeconds, getLevel, stickRendersLeft, randomizeRep,
+  generateCueText, passCueStages, getIntervalSeconds, getLevel, stickRendersLeft, randomizeRep,
   ZONE_NAMES, ZONE_POSITIONS, CONE_COLORS, SHOT_TYPES, LEVEL_LABELS, DRILLS,
 } from './drills';
 import { setStoredLevel } from './sessions';
@@ -114,6 +114,27 @@ describe('generateCueText — pass + shot', () => {
 
   it('level 4 is null (tone only)', () => {
     expect(generateCueText(rep, passDrill, 4)).toBeNull();
+  });
+});
+
+describe('passCueStages — two-stage feed', () => {
+  const rep = { coneFrom: 'Red', coneTo: 'Blue', zone: 'High Off-Stick', shotType: 'Direct' };
+
+  it('stage 1 announces only the origin cone (with a set cue at level 1)', () => {
+    expect(passCueStages(rep, 1).first).toBe('Red cone. Set.');
+    expect(passCueStages(rep, 2).first).toBe('Red');
+    // stage 1 never leaks the destination or shot
+    expect(passCueStages(rep, 1).first).not.toContain('Blue');
+  });
+
+  it('stage 2 announces the receiving cone + shot, scaling by level', () => {
+    expect(passCueStages(rep, 2).second).toBe('Blue. High Off-Stick. Direct.');
+    expect(passCueStages(rep, 3).second).toBe('Blue. High Off-Stick.');
+    expect(passCueStages(rep, 1).second).toContain('drop step'); // feed footwork
+  });
+
+  it('level 4 stage 2 is null (tone only)', () => {
+    expect(passCueStages(rep, 4).second).toBeNull();
   });
 });
 

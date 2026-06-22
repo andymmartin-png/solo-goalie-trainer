@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import GoalDiagram from './GoalDiagram';
 import ConeDiagram from './ConeDiagram';
-import { generateCueText, getLevel, getIntervalSeconds, LEVEL_LABELS, CONE_COLOR_MAP, randomizeRep } from '../data/drills';
+import { generateCueText, passCueStages, getLevel, getIntervalSeconds, LEVEL_LABELS, CONE_COLOR_MAP, randomizeRep } from '../data/drills';
 import { getPerspective } from '../data/store';
 import { playTone, speak, warmUpAudio } from '../audio';
 
@@ -30,6 +30,9 @@ function buildSequence(drill, count, randomize, randomFields) {
 
 const REP_PRESETS = [8, 12, 16, 20];
 
+// Pause between the feed call (origin cone) and the shot call (receiving cone).
+const PASS_FEED_GAP_MS = 2000;
+
 export default function DrillRunner({ profile, drill, voice, onComplete, onBack }) {
   const level            = getLevel(profile, drill);
   const defaultInterval  = getIntervalSeconds(drill, level);
@@ -57,11 +60,33 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
   const [timeLeft,  setTimeLeft]  = useState(interval);
   const [phase,     setPhase]     = useState('ready');
   const [countdown, setCountdown] = useState(3);
+  // For pass drills: 'feed' = origin cone called, 'shot' = receiving cone + shot called.
+  const [passStage, setPassStage] = useState('feed');
 
   const startTimeRef = useRef(null);
   const timerRef     = useRef(null);
+  const passTimerRef = useRef(null);
 
   const currentRep = reps[repIndex];
+  const isPass     = drill.type === 'pass';
+
+  // Announce a rep. Non-pass drills speak a single cue; pass drills call the
+  // origin cone, then after a fixed gap call the receiving cone + shot and flip
+  // the visual to the shot stage.
+  function announceRep(rep) {
+    clearTimeout(passTimerRef.current);
+    if (isPass) {
+      const { first, second } = passCueStages(rep, level);
+      setPassStage('feed');
+      speak(first, voice);
+      passTimerRef.current = setTimeout(() => {
+        setPassStage('shot');
+        if (second) speak(second, voice); else playTone();
+      }, PASS_FEED_GAP_MS);
+    } else {
+      speak(generateCueText(rep, drill, level), voice);
+    }
+  }
 
   // Timer mode
   useEffect(() => {
@@ -83,7 +108,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
         }
         rep = next;
         setRepIndex(next);
-        speak(generateCueText(reps[next], drill, level), voice);
+        announceRep(reps[next]);
         t = interval;
         setTimeLeft(t);
       }
@@ -98,11 +123,12 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
     const next = repIndex + 1;
     if (next >= reps.length) { setPhase('done'); return; }
     setRepIndex(next);
-    speak(generateCueText(reps[next], drill, level), voice);
+    announceRep(reps[next]);
   }
 
   useEffect(() => {
     if (phase === 'done') {
+      clearTimeout(passTimerRef.current);
       window.speechSynthesis?.cancel();
       const duration = startTimeRef.current
         ? Math.round((Date.now() - startTimeRef.current) / 1000)
@@ -120,6 +146,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
     setRepIndex(0);
     setTimeLeft(interval);
     setCountdown(3);
+    setPassStage('feed');
     setPhase('countdown');
   }
 
@@ -135,7 +162,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
         clearInterval(id);
         startTimeRef.current = Date.now();
         setPhase('running');
-        speak(generateCueText(reps[0], drill, level), voice);
+        announceRep(reps[0]);
         return;
       }
       setCountdown(n);
@@ -148,12 +175,25 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
     ? ((interval - timeLeft) / interval) * 100
     : 0;
 
-  const cueText = phase === 'running' && currentRep
-    ? generateCueText(currentRep, drill, level)
-    : null;
+  // For pass drills the shot zone is only revealed at the shot stage.
+  const passShotStage = isPass && passStage === 'shot';
+  const goalZone = phase === 'running' && (!isPass || passShotStage) ? currentRep?.zone : null;
+
+  let cueText = null;
+  if (phase === 'running' && currentRep) {
+    if (isPass) {
+      const stages = passCueStages(currentRep, level);
+      cueText = passShotStage ? stages.second : stages.first;
+    } else {
+      cueText = generateCueText(currentRep, drill, level);
+    }
+  }
 
   const showGoal     = drill.type === 'shot-reaction' || drill.type === 'combined' || drill.type === 'pass';
-  const activeConeColorName = currentRep?.cone ?? currentRep?.coneTo;
+  // The cone badge follows the called cone: origin during the feed, receiver after.
+  const activeConeColorName = isPass
+    ? (passShotStage ? currentRep?.coneTo : currentRep?.coneFrom)
+    : (currentRep?.cone ?? currentRep?.coneTo);
   const activeConeColor = phase === 'running' && activeConeColorName
     ? CONE_COLOR_MAP[activeConeColorName]
     : null;
@@ -169,6 +209,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
       <div className="runner-header">
         <button className="btn-back-runner" onClick={() => {
           clearInterval(timerRef.current);
+          clearTimeout(passTimerRef.current);
           window.speechSynthesis?.cancel();
           onBack();
         }}>← Back</button>
@@ -197,7 +238,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
       <div className="visual-area">
         {showGoal && (
           <GoalDiagram
-            activeZone={phase === 'running' ? currentRep?.zone : null}
+            activeZone={goalZone}
             handedness={profile.handedness}
             level={level}
             perspective={perspective}
@@ -212,8 +253,8 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
         {drill.type === 'pass' && (
           <ConeDiagram
             cones={drill.cones}
-            activeCone={phase === 'running' ? currentRep?.coneTo : null}
-            fromCone={phase === 'running' ? currentRep?.coneFrom : null}
+            activeCone={phase === 'running' ? (passShotStage ? currentRep?.coneTo : currentRep?.coneFrom) : null}
+            fromCone={phase === 'running' && passShotStage ? currentRep?.coneFrom : null}
             compact
           />
         )}

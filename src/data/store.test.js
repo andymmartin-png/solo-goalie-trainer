@@ -60,7 +60,7 @@ describe('drills', () => {
     expect(cone.name).toBe('5-Cone Lateral Shuffle');             // built-in refreshed
     expect(cone.cones[0]).toHaveProperty('shotFrom');             // new field present
     expect(drills.some(d => d.id === 'custom-xyz')).toBe(true);   // custom preserved
-    expect(localStorage.getItem('sgt-drills-version')).toBe('3'); // version updated
+    expect(localStorage.getItem('sgt-drills-version')).toBe('4'); // version updated
   });
 
   it('newBlankDrill is a valid shot-reaction starter', () => {

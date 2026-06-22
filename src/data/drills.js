@@ -124,6 +124,18 @@ export function generateCueText(rep, drill, level) {
   return '';
 }
 
+// Pass drills are delivered in two stages: announce the origin cone, pause ~2s
+// (the feed across the crease), then announce the receiving cone + shot. Returns
+// { first, second } — `second` is null at level 4 (tone only). The origin cone is
+// announced on its own so the goalie sets to the feed before reacting to the shot.
+export function passCueStages(rep, level) {
+  const first = level === 1 ? `${rep.coneFrom} cone. Set.` : rep.coneFrom;
+  if (level === 4) return { first, second: null };
+  if (level === 3) return { first, second: `${rep.coneTo}. ${rep.zone}.` };
+  if (level === 2) return { first, second: `${rep.coneTo}. ${rep.zone}. ${rep.shotType}.` };
+  return { first, second: `${rep.coneTo}. Re-square. Shot ${rep.zone}. ${rep.shotType}. ${techniqueFor(rep.zone, 'pass')}.` };
+}
+
 // Pick a random element from a non-empty array.
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -255,19 +267,24 @@ export const DRILLS = [
     name: 'Crease Feed Reaction',
     type: 'pass',
     levelType: 'shot-reaction',
-    description: 'Simulates a feed across the crease: drop step to re-square from the first cone to the second, then react to the shot.',
-    intervalSeconds: 9,
+    description: 'Simulates a feed across the crease using all five shooting positions. Set to the first cone, then drop step to re-square to the second cone and react to the shot.',
+    intervalSeconds: 10,
     cones: [
-      { color: 'Red',  shotFrom: 'Left 45',  position: 1 },
-      { color: 'Blue', shotFrom: 'Right 45', position: 3 },
+      { color: 'Red',    shotFrom: 'Left Pipe',  position: 0 },
+      { color: 'Blue',   shotFrom: 'Left 45',    position: 1 },
+      { color: 'Green',  shotFrom: 'Top Center', position: 2 },
+      { color: 'Yellow', shotFrom: 'Right 45',   position: 3 },
+      { color: 'Orange', shotFrom: 'Right Pipe', position: 4 },
     ],
     reps: [
-      { coneFrom: 'Red',  coneTo: 'Blue', zone: 'High Off-Stick', shotType: 'Direct' },
-      { coneFrom: 'Blue', coneTo: 'Red',  zone: 'Low Off-Stick',  shotType: 'Bounce shot' },
-      { coneFrom: 'Red',  coneTo: 'Blue', zone: 'Mid Off-Stick',  shotType: 'Sidearm' },
-      { coneFrom: 'Blue', coneTo: 'Red',  zone: 'High Off-Stick', shotType: 'Direct' },
-      { coneFrom: 'Red',  coneTo: 'Blue', zone: '5-Hole',         shotType: 'Skip shot' },
-      { coneFrom: 'Blue', coneTo: 'Red',  zone: 'Low Off-Stick',  shotType: 'Direct' },
+      { coneFrom: 'Red',    coneTo: 'Orange', zone: 'High Off-Stick',  shotType: 'Direct' },
+      { coneFrom: 'Orange', coneTo: 'Red',    zone: 'Low Off-Stick',   shotType: 'Bounce shot' },
+      { coneFrom: 'Blue',   coneTo: 'Yellow', zone: 'Mid Off-Stick',   shotType: 'Sidearm' },
+      { coneFrom: 'Yellow', coneTo: 'Green',  zone: 'High Stick-Side', shotType: 'Direct' },
+      { coneFrom: 'Green',  coneTo: 'Red',    zone: '5-Hole',          shotType: 'Skip shot' },
+      { coneFrom: 'Orange', coneTo: 'Blue',   zone: 'Low Stick-Side',  shotType: 'Direct' },
+      { coneFrom: 'Red',    coneTo: 'Green',  zone: 'High Off-Stick',  shotType: 'Bounce shot' },
+      { coneFrom: 'Yellow', coneTo: 'Orange', zone: 'Mid Stick-Side',  shotType: 'Direct' },
     ],
   },
 ];
