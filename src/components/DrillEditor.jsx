@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { addDrill, updateDrill } from '../data/store';
-import { ZONE_NAMES, SHOT_TYPES, CONE_COLORS, GOAL_SIDES, CONE_COLOR_MAP } from '../data/drills';
+import { ZONE_NAMES, SHOT_TYPES, CONE_COLORS, SHOOTER_POSITIONS, CONE_COLOR_MAP } from '../data/drills';
 
 const TYPES = [
   { id: 'shot-reaction', label: 'Shot Reaction', levelType: 'shot-reaction' },
@@ -30,7 +30,7 @@ export default function DrillEditor({ drill, onDone }) {
     setType(newType);
     // Reset reps to a valid shape for the new type
     const startCones = (newType === 'cone' || newType === 'combined')
-      ? (cones.length ? cones : [{ color: 'Red', goalSide: 'Stick-Side', position: 0 }])
+      ? (cones.length ? cones : [{ color: 'Red', shotFrom: 'Left Pipe', position: 0 }])
       : cones;
     setCones(startCones);
     setReps([blankRep(newType, startCones)]);
@@ -38,15 +38,21 @@ export default function DrillEditor({ drill, onDone }) {
 
   // ── Cone editing ──
   function addCone() {
-    const used = cones.map(c => c.color);
-    const next = CONE_COLORS.find(c => !used.includes(c)) ?? CONE_COLORS[0];
-    setCones([...cones, { color: next, goalSide: GOAL_SIDES[0], position: cones.length }]);
+    const usedColors = cones.map(c => c.color);
+    const nextColor  = CONE_COLORS.find(c => !usedColors.includes(c)) ?? CONE_COLORS[0];
+    const usedSpots  = cones.map(c => c.shotFrom);
+    const nextSpot   = SHOOTER_POSITIONS.find(s => !usedSpots.includes(s)) ?? SHOOTER_POSITIONS[0];
+    setCones([...cones, { color: nextColor, shotFrom: nextSpot, position: SHOOTER_POSITIONS.indexOf(nextSpot) }]);
   }
   function updateCone(i, patch) {
     setCones(cones.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
   }
+  // Keep the field slot (position) in sync with the chosen shooter position.
+  function changeShotFrom(i, spot) {
+    updateCone(i, { shotFrom: spot, position: SHOOTER_POSITIONS.indexOf(spot) });
+  }
   function removeCone(i) {
-    const next = cones.filter((_, idx) => idx !== i).map((c, idx) => ({ ...c, position: idx }));
+    const next = cones.filter((_, idx) => idx !== i);
     setCones(next);
     // Drop reps referencing the removed cone
     const removed = cones[i]?.color;
@@ -140,9 +146,9 @@ export default function DrillEditor({ drill, onDone }) {
                     onChange={e => updateCone(i, { color: e.target.value })}>
                     {CONE_COLORS.map(col => <option key={col} value={col}>{col}</option>)}
                   </select>
-                  <select className="rep-select" value={c.goalSide}
-                    onChange={e => updateCone(i, { goalSide: e.target.value })}>
-                    {GOAL_SIDES.map(g => <option key={g} value={g}>{g}</option>)}
+                  <select className="rep-select" value={c.shotFrom}
+                    onChange={e => changeShotFrom(i, e.target.value)}>
+                    {SHOOTER_POSITIONS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                   <button className="btn-icon btn-icon-danger" onClick={() => removeCone(i)}>✕</button>
                 </div>

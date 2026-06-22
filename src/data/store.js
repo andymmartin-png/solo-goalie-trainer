@@ -52,11 +52,36 @@ export function deleteProfile(id) {
 
 // ── Drills ──
 
+// Bump when the built-in DRILLS change so existing testers pick up the update.
+const DRILLS_VERSION = 2;
+const DRILLS_VERSION_KEY = 'sgt-drills-version';
+
+// Refresh built-in drills (matched by id) to the current defaults while keeping
+// any coach-created custom drills untouched.
+function migrateDrills(stored) {
+  const defaultsById = new Map(DEFAULT_DRILLS.map(d => [d.id, d]));
+  const result = stored.map(d => (defaultsById.has(d.id) ? defaultsById.get(d.id) : d));
+  for (const d of DEFAULT_DRILLS) {
+    if (!result.some(x => x.id === d.id)) result.push(d);
+  }
+  return result;
+}
+
 export function loadDrills() {
   const stored = read(DRILLS_KEY, null);
-  if (stored) return stored;
-  write(DRILLS_KEY, DEFAULT_DRILLS);
-  return DEFAULT_DRILLS;
+  if (!stored) {
+    write(DRILLS_KEY, DEFAULT_DRILLS);
+    localStorage.setItem(DRILLS_VERSION_KEY, String(DRILLS_VERSION));
+    return DEFAULT_DRILLS;
+  }
+  const storedVersion = parseInt(localStorage.getItem(DRILLS_VERSION_KEY)) || 1;
+  if (storedVersion < DRILLS_VERSION) {
+    const merged = migrateDrills(stored);
+    write(DRILLS_KEY, merged);
+    localStorage.setItem(DRILLS_VERSION_KEY, String(DRILLS_VERSION));
+    return merged;
+  }
+  return stored;
 }
 
 export function saveDrills(drills) {

@@ -38,10 +38,8 @@ export function stickRendersLeft(handedness, perspective) {
 export const ZONE_NAMES = Object.keys(ZONE_GRID);
 export const SHOT_TYPES = ['Direct', 'Bounce shot', 'Sidearm', 'Skip shot', 'Overhand'];
 export const CONE_COLORS = Object.keys(CONE_COLOR_MAP);
-export const GOAL_SIDES = [
-  'Stick-Side Low', 'Stick-Side High', 'Stick-Side', 'Center',
-  'Off-Stick High', 'Off-Stick Low', 'Off-Stick',
-];
+// Cones mark where the shooter takes the shot from (left → right, goalie facing the field).
+export const SHOOTER_POSITIONS = ['Left Pipe', 'Left 45', 'Top Center', 'Right 45', 'Right Pipe'];
 
 export function getZoneGrid(zoneName, handedness) {
   const pos = ZONE_GRID[zoneName];
@@ -71,9 +69,12 @@ function shotCue(zone, shotType, level) {
 }
 
 function coneCue(color, cone, level) {
+  const spot = cone?.shotFrom;
   if (level === 3) return color;
-  if (level === 2) return `${color}. ${cone.goalSide}.`;
-  return `${color} cone. Step and shuffle. ${cone.goalSide} save.`;
+  if (level === 2) return spot ? `${color}. ${spot}.` : `${color}.`;
+  return spot
+    ? `${color} cone. ${spot}. Shuffle and set your angle.`
+    : `${color} cone. Shuffle and set your angle.`;
 }
 
 export function generateCueText(rep, drill, level) {
@@ -149,14 +150,14 @@ export const DRILLS = [
     name: '5-Cone Lateral Shuffle',
     type: 'cone',
     levelType: 'cone',
-    description: 'Five cones spanning the full save range. React to the color and shuffle laterally to that position.',
+    description: 'Five cones marking common shooting positions, from Left Pipe to Right Pipe. React to the color and shuffle to cover the angle.',
     intervalSeconds: 8,
     cones: [
-      { color: 'Red',    goalSide: 'Stick-Side Low',  position: 0 },
-      { color: 'Blue',   goalSide: 'Stick-Side High', position: 1 },
-      { color: 'Green',  goalSide: 'Center',          position: 2 },
-      { color: 'Yellow', goalSide: 'Off-Stick High',  position: 3 },
-      { color: 'Orange', goalSide: 'Off-Stick Low',   position: 4 },
+      { color: 'Red',    shotFrom: 'Left Pipe',   position: 0 },
+      { color: 'Blue',   shotFrom: 'Left 45',     position: 1 },
+      { color: 'Green',  shotFrom: 'Top Center',  position: 2 },
+      { color: 'Yellow', shotFrom: 'Right 45',    position: 3 },
+      { color: 'Orange', shotFrom: 'Right Pipe',  position: 4 },
     ],
     reps: [
       { cone: 'Red'    },
@@ -176,11 +177,11 @@ export const DRILLS = [
     name: 'Corner Attack',
     type: 'combined',
     levelType: 'shot-reaction',
-    description: 'Combines cone footwork with a shot-reaction cue. Step to the cone, then react to the called zone.',
+    description: 'Combines cone footwork with a shot-reaction cue. Step to the shooting position, then react to the called net zone.',
     intervalSeconds: 8,
     cones: [
-      { color: 'Red',  goalSide: 'Stick-Side', position: 0 },
-      { color: 'Blue', goalSide: 'Off-Stick',  position: 4 },
+      { color: 'Red',  shotFrom: 'Left 45',  position: 1 },
+      { color: 'Blue', shotFrom: 'Right 45', position: 3 },
     ],
     reps: [
       { cone: 'Red',  zone: 'Low Stick-Side',  shotType: 'Bounce shot' },

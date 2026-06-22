@@ -192,12 +192,10 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
           />
         )}
         {drill.type === 'cone' && (
-          <ConeDiagram cones={drill.cones} activeCone={phase === 'running' ? currentRep?.cone : null}
-            handedness={profile.handedness} perspective={perspective} />
+          <ConeDiagram cones={drill.cones} activeCone={phase === 'running' ? currentRep?.cone : null} />
         )}
         {drill.type === 'combined' && (
-          <ConeDiagram cones={drill.cones} activeCone={phase === 'running' ? currentRep?.cone : null} compact
-            handedness={profile.handedness} perspective={perspective} />
+          <ConeDiagram cones={drill.cones} activeCone={phase === 'running' ? currentRep?.cone : null} compact />
         )}
       </div>
 

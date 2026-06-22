@@ -1,28 +1,29 @@
-import { CONE_COLOR_MAP, stickRendersLeft } from '../data/drills';
+import { CONE_COLOR_MAP } from '../data/drills';
 
-// Positions cones along a shallow upward arc.
-// Cones are authored stick-side → off-stick by array order; `mirror` flips the
-// arc horizontally so the stick-side cone sits on the goalie's stick side.
-function computePositions(cones, W, H, mirror) {
+// Positions cones along a shallow upward arc by their shooter-position slot.
+// Cones carry an absolute field slot (`position`, 0 = Left Pipe … 4 = Right Pipe),
+// so the arc always reads left → right as the goalie faces the field — no
+// handedness/perspective mirroring (the position labels are absolute).
+function computePositions(cones, W, H) {
   const n = cones.length;
   const left = 40, right = W - 40;
   const baseY = H - 30, apexY = H * 0.25;
+  const slots = cones.map((c, i) => (typeof c.position === 'number' ? c.position : i));
+  const maxSlot = Math.max(4, ...slots);
 
   return cones.map((cone, i) => {
-    const t = n === 1 ? 0.5 : i / (n - 1);
-    let x = left + t * (right - left);
-    if (mirror) x = W - x;
+    const t = n === 1 ? 0.5 : slots[i] / maxSlot;
+    const x = left + t * (right - left);
     const normalized = 2 * t - 1; // -1 to 1
     const y = apexY + (baseY - apexY) * normalized * normalized;
     return { ...cone, x, y };
   });
 }
 
-export default function ConeDiagram({ cones, activeCone, compact = false, handedness = 'right', perspective = 'goalie' }) {
+export default function ConeDiagram({ cones, activeCone, compact = false }) {
   const W = compact ? 280 : 300;
   const H = compact ? 90  : 180;
-  const mirror = !stickRendersLeft(handedness, perspective);
-  const positions = computePositions(cones, W, H, mirror);
+  const positions = computePositions(cones, W, H);
 
   // Draw a smooth arc path through cone positions
   const pathD = positions.length >= 2
@@ -82,8 +83,8 @@ export default function ConeDiagram({ cones, activeCone, compact = false, handed
                 {cone.color}
               </text>
             )}
-            {/* Goal-side label on active cone (non-compact) */}
-            {!compact && isActive && cone.goalSide && (
+            {/* Shooter-position label on active cone (non-compact) */}
+            {!compact && isActive && cone.shotFrom && (
               <text
                 x={cone.x}
                 y={cone.y - r - 8}
@@ -91,7 +92,7 @@ export default function ConeDiagram({ cones, activeCone, compact = false, handed
                 fontSize="10"
                 fill="#94a3b8"
               >
-                {cone.goalSide}
+                {cone.shotFrom}
               </text>
             )}
           </g>

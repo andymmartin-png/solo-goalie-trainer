@@ -36,12 +36,17 @@ describe('generateCueText — shot reaction', () => {
 });
 
 describe('generateCueText — cone', () => {
-  const rep = { cone: 'Red' };
+  const rep = { cone: 'Red' }; // Red maps to the Left Pipe shooting position
 
-  it('level 1 gives full step-and-shuffle cue with goal side', () => {
+  it('level 1 names the color, shooter position, and footwork', () => {
     const cue = generateCueText(rep, coneDrill, 1);
     expect(cue).toContain('Red');
-    expect(cue).toContain('shuffle');
+    expect(cue).toContain('Left Pipe');
+    expect(cue.toLowerCase()).toContain('shuffle');
+  });
+
+  it('level 2 is color + shooter position', () => {
+    expect(generateCueText(rep, coneDrill, 2)).toBe('Red. Left Pipe.');
   });
 
   it('level 3 is color only', () => {
