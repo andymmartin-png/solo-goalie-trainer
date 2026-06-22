@@ -2,6 +2,8 @@ import { LEVEL_LABELS } from '../data/drills';
 import { loadProfiles } from '../data/store';
 import { getStoredLevel } from '../data/sessions.js';
 import ThemeToggle from './ThemeToggle';
+import InstallPrompt from './InstallPrompt';
+import FeedbackButton from './FeedbackButton';
 
 function liveLevel(profile, type) {
   return getStoredLevel(profile.id, type) ?? (type === 'cone' ? profile.coneLevel : profile.shotReactionLevel);
@@ -16,6 +18,8 @@ export default function ProfileSelect({ onSelect, onCoach }) {
         <button className="btn-coach" onClick={onCoach}>👤 Coach</button>
         <ThemeToggle />
       </div>
+
+      <InstallPrompt />
 
       <div className="screen-header">
         <div className="app-logo">
@@ -52,7 +56,10 @@ export default function ProfileSelect({ onSelect, onCoach }) {
         })}
       </div>
 
-      <p className="screen-footer">Manage athletes and drills in Coach mode</p>
+      <div className="screen-footer">
+        <span>Manage athletes and drills in Coach mode</span>
+        <FeedbackButton />
+      </div>
     </div>
   );
 }

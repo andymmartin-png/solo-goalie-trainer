@@ -162,6 +162,10 @@ html, body, #root {
 }
 
 .screen-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
   text-align: center;
   font-size: 12px;
   color: var(--text-dim);
@@ -988,6 +992,56 @@ html, body, #root {
   transition: border-color 0.15s, color 0.15s;
 }
 .btn-coach:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Install banner */
+.install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(177, 205, 227, 0.12);
+  border: 1.5px solid var(--accent-dim);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.install-text { font-size: 13px; color: var(--text); line-height: 1.35; }
+.install-text strong { color: var(--accent); font-weight: 700; }
+.install-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.install-btn {
+  background: var(--accent);
+  color: var(--accent-on);
+  border: none;
+  border-radius: 99px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.install-btn:hover { filter: brightness(1.05); }
+.install-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+}
+.install-dismiss:hover { color: var(--text); }
+
+/* Feedback link */
+.feedback-link {
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1.5px solid var(--border);
+  border-radius: 99px;
+  padding: 7px 14px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.feedback-link:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ─────────────────────────────
    ONBOARDING
