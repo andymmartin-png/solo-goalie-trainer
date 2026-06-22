@@ -3,33 +3,7 @@ import GoalDiagram from './GoalDiagram';
 import ConeDiagram from './ConeDiagram';
 import { generateCueText, getLevel, getIntervalSeconds, LEVEL_LABELS, CONE_COLOR_MAP } from '../data/drills';
 import { getPerspective } from '../data/store';
-
-function playTone() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.15);
-  } catch (e) { /* audio not available */ }
-}
-
-function speak(text, voice) {
-  if (!text) { playTone(); return; }
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.rate = 1.5;
-  utt.pitch = 1.0;
-  if (voice) utt.voice = voice;
-  window.speechSynthesis.speak(utt);
-}
+import { playTone, speak, warmUpAudio } from '../audio';
 
 function shuffle(arr) {
   const a = [...arr];
@@ -135,6 +109,7 @@ export default function DrillRunner({ profile, drill, voice, onComplete, onBack 
   }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function startDrill() {
+    warmUpAudio(); // unlock iOS audio + speech inside this tap gesture
     const sequence = buildSequence(drill.reps, effectiveReps, randomize);
     setReps(sequence);
     setRepIndex(0);
