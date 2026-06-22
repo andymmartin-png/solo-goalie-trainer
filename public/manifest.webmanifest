@@ -1,0 +1,19 @@
+{
+  "name": "Solo Goalie Trainer",
+  "short_name": "Goalie Trainer",
+  "description": "Solo lacrosse goalie reaction and footwork training with audio + visual cues.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
