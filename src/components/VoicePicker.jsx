@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { speak } from '../audio';
+import { getSpeechRate, setSpeechRate, SPEECH_RATE_MIN, SPEECH_RATE_MAX } from '../data/store';
 
 const STORAGE_KEY = 'sgt-voice-uri';
 
@@ -28,8 +30,18 @@ export function useSpeechVoice() {
 
 export default function VoicePicker({ voices, activeVoice, selectedUri, selectVoice }) {
   const [open, setOpen] = useState(false);
+  const [rate, setRate] = useState(() => getSpeechRate());
 
   if (!voices.length) return null;
+
+  function changeRate(value) {
+    const r = setSpeechRate(parseFloat(value));
+    setRate(r);
+  }
+
+  function testSpeed() {
+    speak('High, stick side. Bounce shot.', activeVoice);
+  }
 
   // Group voices by language prefix (en, fr, etc.)
   const enVoices  = voices.filter(v => v.lang.startsWith('en'));
@@ -52,7 +64,7 @@ export default function VoicePicker({ voices, activeVoice, selectedUri, selectVo
             <button
               key={v.voiceURI}
               className={`voice-option ${v.voiceURI === (activeVoice?.voiceURI) ? 'voice-option-active' : ''}`}
-              onClick={() => { selectVoice(v.voiceURI); setOpen(false); preview(v); }}
+              onClick={() => { selectVoice(v.voiceURI); setOpen(false); speak('High, stick side', v); }}
             >
               <span className="voice-name">{v.name}</span>
               <span className="voice-lang">{v.lang}</span>
@@ -65,7 +77,7 @@ export default function VoicePicker({ voices, activeVoice, selectedUri, selectVo
                 <button
                   key={v.voiceURI}
                   className={`voice-option ${v.voiceURI === (activeVoice?.voiceURI) ? 'voice-option-active' : ''}`}
-                  onClick={() => { selectVoice(v.voiceURI); setOpen(false); preview(v); }}
+                  onClick={() => { selectVoice(v.voiceURI); setOpen(false); speak('High, stick side', v); }}
                 >
                   <span className="voice-name">{v.name}</span>
                   <span className="voice-lang">{v.lang}</span>
@@ -75,15 +87,21 @@ export default function VoicePicker({ voices, activeVoice, selectedUri, selectVo
           )}
         </div>
       )}
+
+      <div className="speed-row">
+        <span className="speed-label">Cue speed</span>
+        <input
+          className="speed-slider"
+          type="range"
+          min={SPEECH_RATE_MIN}
+          max={SPEECH_RATE_MAX}
+          step="0.1"
+          value={rate}
+          onChange={e => changeRate(e.target.value)}
+        />
+        <span className="speed-value">{rate.toFixed(1)}×</span>
+        <button className="speed-test" onClick={testSpeed}>▶ Test</button>
+      </div>
     </div>
   );
-}
-
-function preview(voice) {
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance('High, stick side');
-  utt.voice = voice;
-  utt.rate = 1.5;
-  window.speechSynthesis.speak(utt);
 }

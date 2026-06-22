@@ -103,6 +103,23 @@ export function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
 }
 
+// ── Cue speech rate ──
+// Web Speech rate multiplier. 1.0 = normal; higher = faster ("game speed").
+const SPEECH_RATE_KEY = 'sgt-speech-rate';
+export const SPEECH_RATE_MIN = 0.6;
+export const SPEECH_RATE_MAX = 1.6;
+
+export function getSpeechRate() {
+  const v = parseFloat(localStorage.getItem(SPEECH_RATE_KEY));
+  return Number.isFinite(v) ? v : 1.0;
+}
+
+export function setSpeechRate(rate) {
+  const clamped = Math.min(SPEECH_RATE_MAX, Math.max(SPEECH_RATE_MIN, rate));
+  localStorage.setItem(SPEECH_RATE_KEY, String(clamped));
+  return clamped;
+}
+
 // ── Goal diagram perspective ──
 // 'goalie'  = egocentric (stick side on the goalie's own side) — recommended for reaction reps
 // 'shooter' = traditional coaching-diagram view (looking at the goal from the field)

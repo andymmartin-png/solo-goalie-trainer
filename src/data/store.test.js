@@ -3,6 +3,7 @@ import {
   loadProfiles, addProfile, updateProfile, deleteProfile,
   loadDrills, addDrill, updateDrill, deleteDrill, newBlankDrill,
   getPerspective, setPerspective,
+  getSpeechRate, setSpeechRate, SPEECH_RATE_MIN, SPEECH_RATE_MAX,
   getTheme, setTheme,
   isOnboarded, setOnboarded,
 } from './store';
@@ -58,6 +59,19 @@ describe('perspective setting', () => {
     expect(getPerspective()).toBe('goalie');
     setPerspective('shooter');
     expect(getPerspective()).toBe('shooter');
+  });
+});
+
+describe('cue speech rate', () => {
+  it('defaults to 1.0 and persists changes', () => {
+    expect(getSpeechRate()).toBe(1.0);
+    setSpeechRate(1.3);
+    expect(getSpeechRate()).toBeCloseTo(1.3);
+  });
+
+  it('clamps out-of-range values', () => {
+    expect(setSpeechRate(5)).toBe(SPEECH_RATE_MAX);
+    expect(setSpeechRate(0.1)).toBe(SPEECH_RATE_MIN);
   });
 });
 

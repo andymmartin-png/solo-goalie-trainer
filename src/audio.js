@@ -9,6 +9,8 @@
 // warmUpAudio() handles both and must be called synchronously from a real tap
 // (the "Start Drill" handler), before any countdown/cue fires.
 
+import { getSpeechRate } from './data/store';
+
 let ctx = null;
 
 function getCtx() {
@@ -72,7 +74,7 @@ export function speak(text, voice) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  utt.rate = 1.5;
+  utt.rate = getSpeechRate();
   utt.pitch = 1.0;
   if (voice) utt.voice = voice;
   window.speechSynthesis.speak(utt);
